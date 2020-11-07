@@ -1636,10 +1636,10 @@ function compareToRef(ref, pr, repo) {
     return __awaiter(this, void 0, void 0, function* () {
         const { token, benchmarkScript, workingDirectory } = getOptions();
         const octokit = github_1.getOctokit(token);
-        const base = yield benchmark_1.executeBenchmarkScript(benchmarkScript, undefined, workingDirectory);
-        const current = yield benchmark_1.executeBenchmarkScript(benchmarkScript, ref, workingDirectory);
+        const newBenchmark = yield benchmark_1.executeBenchmarkScript(benchmarkScript, undefined, workingDirectory);
+        const previousBenchmark = yield benchmark_1.executeBenchmarkScript(benchmarkScript, ref, workingDirectory);
         if (pr && repo) {
-            const body = format_1.formatResults(base, current);
+            const body = format_1.formatResults(newBenchmark, previousBenchmark);
             const previousComment = yield fetchPreviousComment(octokit, repo, pr);
             try {
                 if (!previousComment) {
@@ -6071,7 +6071,7 @@ exports.BENCHMARK_HEADING = `## Benchmark report`;
 function formatResult(result) {
     return `${result.opsPerSecond} ops/sec, ±${result.deviation}%, ${result.samples} samples`;
 }
-function formatResults(previousResults, newResults) {
+function formatResults(newResults, previousResults) {
     const parsedResults = {};
     for (const newResult of newResults) {
         const oldResult = newResults.find((it) => it.name === newResult.name);
@@ -6796,6 +6796,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.executeBenchmarkScript = void 0;
 const exec_1 = __webpack_require__(514);
 const has_yarn_1 = __importDefault(__webpack_require__(707));
+const fs_1 = __webpack_require__(747);
+const path_1 = __webpack_require__(622);
 const BENCHMARK_LABEL = "Benchmark results: ";
 function executeBenchmarkScript(benchmarkScript, branch, workingDirectory) {
     var _a, _b;
@@ -6810,22 +6812,33 @@ function executeBenchmarkScript(benchmarkScript, branch, workingDirectory) {
             }
             yield exec_1.exec(`git checkout -f ${branch}`);
         }
-        yield exec_1.exec(`${manager} install`, [], {
-            cwd: workingDirectory,
-        });
-        let commandOutput = "";
-        yield exec_1.exec(`${manager} run ${benchmarkScript}`, [], {
-            cwd: workingDirectory,
-            listeners: {
-                stdout(data) {
-                    commandOutput += data.toString();
-                },
-                stderr(data) {
-                    console.log(data.toString());
-                },
-            },
-        });
-        const benchmarkResult = (_b = (_a = commandOutput
+        function execWithCwd(cmd, cwd) {
+            return __awaiter(this, void 0, void 0, function* () {
+                let stdout = "";
+                let stderr = "";
+                yield exec_1.exec(cmd, [], {
+                    cwd,
+                    listeners: {
+                        stdout(data) {
+                            stdout += data.toString();
+                        },
+                        stderr(data) {
+                            stderr += data.toString();
+                        },
+                    },
+                });
+                return stderr ? Promise.reject(stderr) : Promise.resolve(stdout);
+            });
+        }
+        yield execWithCwd(`${manager} install`, workingDirectory);
+        const packageJsonContent = yield fs_1.readFile.__promisify__(path_1.join(workingDirectory !== null && workingDirectory !== void 0 ? workingDirectory : "", "package.json"));
+        const packageJsonScripts = JSON.parse(packageJsonContent.toString()).scripts;
+        if (!(benchmarkScript in packageJsonScripts)) {
+            console.log(`Script ${benchmarkScript} not found in your package.json, skipping comparison`);
+            return [];
+        }
+        const benchmarkOutput = yield execWithCwd(`${manager} run ${benchmarkScript}`, workingDirectory);
+        const benchmarkResult = (_b = (_a = benchmarkOutput
             .split("\n")
             .find((line) => line.startsWith(BENCHMARK_LABEL))) === null || _a === void 0 ? void 0 : _a.split(BENCHMARK_LABEL)) === null || _b === void 0 ? void 0 : _b[1];
         if (!benchmarkResult) {
