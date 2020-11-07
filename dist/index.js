@@ -1628,16 +1628,17 @@ function fetchPreviousComment(octokit, repo, pr) {
 function getOptions() {
     return {
         token: core_1.getInput("github_token"),
+        buildScript: core_1.getInput("build_script") || "build",
         benchmarkScript: core_1.getInput("benchmark_script"),
         workingDirectory: core_1.getInput("working_directory") || process.cwd(),
     };
 }
 function compareToRef(ref, pr, repo) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { token, benchmarkScript, workingDirectory } = getOptions();
+        const { token, buildScript, benchmarkScript, workingDirectory } = getOptions();
         const octokit = github_1.getOctokit(token);
-        const base = yield benchmark_1.executeBenchmarkScript(benchmarkScript, undefined, workingDirectory);
-        const current = yield benchmark_1.executeBenchmarkScript(benchmarkScript, ref, workingDirectory);
+        const base = yield benchmark_1.executeBenchmarkScript(buildScript, benchmarkScript, undefined, workingDirectory);
+        const current = yield benchmark_1.executeBenchmarkScript(buildScript, benchmarkScript, ref, workingDirectory);
         if (pr && repo) {
             const body = format_1.formatResults(base, current);
             const previousComment = yield fetchPreviousComment(octokit, repo, pr);
@@ -6796,7 +6797,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.executeBenchmarkScript = void 0;
 const exec_1 = __webpack_require__(514);
 const has_yarn_1 = __importDefault(__webpack_require__(707));
-function executeBenchmarkScript(benchmarkScript, branch, workingDirectory) {
+function executeBenchmarkScript(buildScript, benchmarkScript, branch, workingDirectory) {
     return __awaiter(this, void 0, void 0, function* () {
         const manager = has_yarn_1.default() ? "yarn" : "npm";
         if (branch) {
@@ -6809,6 +6810,9 @@ function executeBenchmarkScript(benchmarkScript, branch, workingDirectory) {
             yield exec_1.exec(`git checkout -f ${branch}`);
         }
         yield exec_1.exec(`${manager} install`, [], {
+            cwd: workingDirectory,
+        });
+        yield exec_1.exec(`${manager} run ${buildScript}`, [], {
             cwd: workingDirectory,
         });
         let benchmarks = "";

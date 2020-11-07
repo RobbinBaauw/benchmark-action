@@ -11,6 +11,7 @@ export interface BenchmarkResult {
 }
 
 export async function executeBenchmarkScript(
+    buildScript: string,
     benchmarkScript: string,
     branch?: string,
     workingDirectory?: string,
@@ -28,6 +29,10 @@ export async function executeBenchmarkScript(
     }
 
     await exec(`${manager} install`, [], {
+        cwd: workingDirectory,
+    });
+
+    await exec(`${manager} run ${buildScript}`, [], {
         cwd: workingDirectory,
     });
 

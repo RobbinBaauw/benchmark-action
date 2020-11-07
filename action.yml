@@ -11,6 +11,9 @@ inputs:
     benchmark_script:
         required: true
         description: 'a custom npm script to benchmark your application'
+    build_script:
+        required: false
+        description: 'the script used to build the project'
     working_directory:
         required: false
         description: 'a custom working directory'
