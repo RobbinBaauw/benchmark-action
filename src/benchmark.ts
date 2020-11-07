@@ -10,8 +10,9 @@ export interface BenchmarkResult {
     samples: number;
 }
 
+const BENCHMARK_LABEL = "Benchmark results: ";
+
 export async function executeBenchmarkScript(
-    buildScript: string,
     benchmarkScript: string,
     branch?: string,
     workingDirectory?: string,
@@ -32,16 +33,12 @@ export async function executeBenchmarkScript(
         cwd: workingDirectory,
     });
 
-    await exec(`${manager} run ${buildScript}`, [], {
-        cwd: workingDirectory,
-    });
-
-    let benchmarks: string = "";
+    let commandOutput: string = "";
     await exec(`${manager} run ${benchmarkScript}`, [], {
         cwd: workingDirectory,
         listeners: {
             stdout(data) {
-                benchmarks += data.toString();
+                commandOutput += data.toString();
             },
             stderr(data) {
                 console.log(data.toString());
@@ -49,5 +46,16 @@ export async function executeBenchmarkScript(
         },
     });
 
-    return JSON.parse(benchmarks);
+    const benchmarkResult = commandOutput
+        .split("\n")
+        .find((line) => line.startsWith(BENCHMARK_LABEL))
+        ?.split(BENCHMARK_LABEL)?.[1];
+
+    if (!benchmarkResult) {
+        throw new Error(
+            `No benchmark results found, make sure you output it on a single line as JSON as such: '${BENCHMARK_LABEL}[...]`,
+        );
+    }
+
+    return JSON.parse(benchmarkResult);
 }

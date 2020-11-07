@@ -25,19 +25,18 @@ type GHPullRequest = WebhookPayload["pull_request"];
 function getOptions() {
     return {
         token: getInput("github_token"),
-        buildScript: getInput("build_script") || "build",
         benchmarkScript: getInput("benchmark_script"),
         workingDirectory: getInput("working_directory") || process.cwd(),
     };
 }
 
 async function compareToRef(ref: string, pr?: GHPullRequest, repo?: GHRepo) {
-    const { token, buildScript, benchmarkScript, workingDirectory } = getOptions();
+    const { token, benchmarkScript, workingDirectory } = getOptions();
 
     const octokit = getOctokit(token);
 
-    const base = await executeBenchmarkScript(buildScript, benchmarkScript, undefined, workingDirectory);
-    const current = await executeBenchmarkScript(buildScript, benchmarkScript, ref, workingDirectory);
+    const base = await executeBenchmarkScript(benchmarkScript, undefined, workingDirectory);
+    const current = await executeBenchmarkScript(benchmarkScript, ref, workingDirectory);
 
     if (pr && repo) {
         const body = formatResults(base, current);

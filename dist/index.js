@@ -1628,17 +1628,16 @@ function fetchPreviousComment(octokit, repo, pr) {
 function getOptions() {
     return {
         token: core_1.getInput("github_token"),
-        buildScript: core_1.getInput("build_script") || "build",
         benchmarkScript: core_1.getInput("benchmark_script"),
         workingDirectory: core_1.getInput("working_directory") || process.cwd(),
     };
 }
 function compareToRef(ref, pr, repo) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { token, buildScript, benchmarkScript, workingDirectory } = getOptions();
+        const { token, benchmarkScript, workingDirectory } = getOptions();
         const octokit = github_1.getOctokit(token);
-        const base = yield benchmark_1.executeBenchmarkScript(buildScript, benchmarkScript, undefined, workingDirectory);
-        const current = yield benchmark_1.executeBenchmarkScript(buildScript, benchmarkScript, ref, workingDirectory);
+        const base = yield benchmark_1.executeBenchmarkScript(benchmarkScript, undefined, workingDirectory);
+        const current = yield benchmark_1.executeBenchmarkScript(benchmarkScript, ref, workingDirectory);
         if (pr && repo) {
             const body = format_1.formatResults(base, current);
             const previousComment = yield fetchPreviousComment(octokit, repo, pr);
@@ -6797,7 +6796,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.executeBenchmarkScript = void 0;
 const exec_1 = __webpack_require__(514);
 const has_yarn_1 = __importDefault(__webpack_require__(707));
-function executeBenchmarkScript(buildScript, benchmarkScript, branch, workingDirectory) {
+const BENCHMARK_LABEL = "Benchmark results: ";
+function executeBenchmarkScript(benchmarkScript, branch, workingDirectory) {
+    var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         const manager = has_yarn_1.default() ? "yarn" : "npm";
         if (branch) {
@@ -6812,22 +6813,25 @@ function executeBenchmarkScript(buildScript, benchmarkScript, branch, workingDir
         yield exec_1.exec(`${manager} install`, [], {
             cwd: workingDirectory,
         });
-        yield exec_1.exec(`${manager} run ${buildScript}`, [], {
-            cwd: workingDirectory,
-        });
-        let benchmarks = "";
+        let commandOutput = "";
         yield exec_1.exec(`${manager} run ${benchmarkScript}`, [], {
             cwd: workingDirectory,
             listeners: {
                 stdout(data) {
-                    benchmarks += data.toString();
+                    commandOutput += data.toString();
                 },
                 stderr(data) {
                     console.log(data.toString());
                 },
             },
         });
-        return JSON.parse(benchmarks);
+        const benchmarkResult = (_b = (_a = commandOutput
+            .split("\n")
+            .find((line) => line.startsWith(BENCHMARK_LABEL))) === null || _a === void 0 ? void 0 : _a.split(BENCHMARK_LABEL)) === null || _b === void 0 ? void 0 : _b[1];
+        if (!benchmarkResult) {
+            throw new Error(`No benchmark results found, make sure you output it on a single line as JSON as such: '${BENCHMARK_LABEL}[...]`);
+        }
+        return JSON.parse(benchmarkResult);
     });
 }
 exports.executeBenchmarkScript = executeBenchmarkScript;
