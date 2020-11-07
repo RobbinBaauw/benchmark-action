@@ -6798,6 +6798,7 @@ const exec_1 = __webpack_require__(514);
 const has_yarn_1 = __importDefault(__webpack_require__(707));
 const fs_1 = __webpack_require__(747);
 const path_1 = __webpack_require__(622);
+const util_1 = __webpack_require__(669);
 const BENCHMARK_LABEL = "Benchmark results: ";
 function executeBenchmarkScript(benchmarkScript, branch, workingDirectory) {
     var _a, _b;
@@ -6831,7 +6832,7 @@ function executeBenchmarkScript(benchmarkScript, branch, workingDirectory) {
             });
         }
         yield execWithCwd(`${manager} install`, workingDirectory);
-        const packageJsonContent = yield fs_1.readFile.__promisify__(path_1.join(workingDirectory !== null && workingDirectory !== void 0 ? workingDirectory : "", "package.json"));
+        const packageJsonContent = yield util_1.promisify(fs_1.readFile)(path_1.join(workingDirectory !== null && workingDirectory !== void 0 ? workingDirectory : "", "package.json"));
         const packageJsonScripts = JSON.parse(packageJsonContent.toString()).scripts;
         if (!(benchmarkScript in packageJsonScripts)) {
             console.log(`Script ${benchmarkScript} not found in your package.json, skipping comparison`);

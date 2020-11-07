@@ -2,6 +2,7 @@ import { exec } from "@actions/exec";
 import hasYarn from "has-yarn";
 import { readFile } from "fs";
 import { join } from "path";
+import { promisify } from "util";
 
 export interface BenchmarkResult {
     name: string;
@@ -52,7 +53,7 @@ export async function executeBenchmarkScript(
 
     await execWithCwd(`${manager} install`, workingDirectory);
 
-    const packageJsonContent = await readFile.__promisify__(join(workingDirectory ?? "", "package.json"));
+    const packageJsonContent = await promisify(readFile)(join(workingDirectory ?? "", "package.json"));
     const packageJsonScripts = JSON.parse(packageJsonContent.toString()).scripts;
     if (!(benchmarkScript in packageJsonScripts)) {
         console.log(`Script ${benchmarkScript} not found in your package.json, skipping comparison`);
