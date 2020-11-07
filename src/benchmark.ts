@@ -1,5 +1,7 @@
 import { exec } from "@actions/exec";
 import hasYarn from "has-yarn";
+import { readFile } from "fs";
+import { join } from "path";
 
 export interface BenchmarkResult {
     name: string;
@@ -29,24 +31,37 @@ export async function executeBenchmarkScript(
         await exec(`git checkout -f ${branch}`);
     }
 
-    await exec(`${manager} install`, [], {
-        cwd: workingDirectory,
-    });
+    async function execWithCwd(cmd: string, cwd?: string): Promise<string> {
+        let stdout = "";
+        let stderr = "";
 
-    let commandOutput: string = "";
-    await exec(`${manager} run ${benchmarkScript}`, [], {
-        cwd: workingDirectory,
-        listeners: {
-            stdout(data) {
-                commandOutput += data.toString();
+        await exec(cmd, [], {
+            cwd,
+            listeners: {
+                stdout(data) {
+                    stdout += data.toString();
+                },
+                stderr(data) {
+                    stderr += data.toString();
+                },
             },
-            stderr(data) {
-                console.log(data.toString());
-            },
-        },
-    });
+        });
 
-    const benchmarkResult = commandOutput
+        return stderr ? Promise.reject(stderr) : Promise.resolve(stdout);
+    }
+
+    await execWithCwd(`${manager} install`, workingDirectory);
+
+    const packageJsonContent = await readFile.__promisify__(join(workingDirectory ?? "", "package.json"));
+    const packageJsonScripts = JSON.parse(packageJsonContent.toString()).scripts;
+    if (!(benchmarkScript in packageJsonScripts)) {
+        console.log(`Script ${benchmarkScript} not found in your package.json, skipping comparison`);
+        return [];
+    }
+
+    const benchmarkOutput = await execWithCwd(`${manager} run ${benchmarkScript}`, workingDirectory);
+
+    const benchmarkResult = benchmarkOutput
         .split("\n")
         .find((line) => line.startsWith(BENCHMARK_LABEL))
         ?.split(BENCHMARK_LABEL)?.[1];

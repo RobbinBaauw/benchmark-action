@@ -1,6 +1,5 @@
 import { getInput, setFailed } from "@actions/core";
 import { context, getOctokit } from "@actions/github";
-import table from "markdown-table";
 import { WebhookPayload } from "@actions/github/lib/interfaces";
 import { Context } from "@actions/github/lib/context";
 import { BenchmarkResult, executeBenchmarkScript } from "./benchmark";
@@ -36,16 +35,7 @@ async function compareToRef(ref: string, pr?: GHPullRequest, repo?: GHRepo) {
     const octokit = getOctokit(token);
 
     const newBenchmark = await executeBenchmarkScript(benchmarkScript, undefined, workingDirectory);
-
-    let previousBenchmark: BenchmarkResult[];
-    try {
-        previousBenchmark = await executeBenchmarkScript(benchmarkScript, ref, workingDirectory);
-    } catch (e) {
-        // It's okay if the second one fails.
-        console.log(e);
-
-        previousBenchmark = [];
-    }
+    const previousBenchmark = await executeBenchmarkScript(benchmarkScript, ref, workingDirectory);
 
     if (pr && repo) {
         const body = formatResults(newBenchmark, previousBenchmark);
