@@ -1,3 +1,6 @@
 module.exports = {
-    extends:  ["@robbinbaauw"],
+    extends: ["@robbinbaauw"],
+    rules: {
+        "no-console": "off",
+    },
 };

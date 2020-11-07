@@ -1,0 +1,19 @@
+name: 'benchmark-action'
+description: 'benchmark action'
+author: 'Robbin Baauw (robbin.baauw@gmail.com)'
+branding:
+    icon: 'activity'
+    color: 'green'
+inputs:
+    github_token:
+        required: true
+        description: 'a github access token'
+    benchmark_script:
+        required: true
+        description: 'a custom npm script to benchmark your application'
+    working_directory:
+        required: false
+        description: 'a custom working directory'
+runs:
+    using: 'node12'
+    main: 'dist/index.js'
