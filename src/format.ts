@@ -9,7 +9,7 @@ function formatResult(result: BenchmarkResult): string {
     return `${result.opsPerSecond} ops/sec, ±${result.deviation}%, ${result.samples} samples`;
 }
 
-export function formatResults(previousResults: BenchmarkResult[], newResults: BenchmarkResult[]): string {
+export function formatResults(newResults: BenchmarkResult[], previousResults: BenchmarkResult[]): string {
     const parsedResults: {
         [category: string]: ParsedResult[];
     } = {};

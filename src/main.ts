@@ -3,7 +3,7 @@ import { context, getOctokit } from "@actions/github";
 import table from "markdown-table";
 import { WebhookPayload } from "@actions/github/lib/interfaces";
 import { Context } from "@actions/github/lib/context";
-import { executeBenchmarkScript } from "./benchmark";
+import { BenchmarkResult, executeBenchmarkScript } from "./benchmark";
 import { BENCHMARK_HEADING, formatResults } from "./format";
 
 async function fetchPreviousComment(
@@ -35,11 +35,20 @@ async function compareToRef(ref: string, pr?: GHPullRequest, repo?: GHRepo) {
 
     const octokit = getOctokit(token);
 
-    const base = await executeBenchmarkScript(benchmarkScript, undefined, workingDirectory);
-    const current = await executeBenchmarkScript(benchmarkScript, ref, workingDirectory);
+    const newBenchmark = await executeBenchmarkScript(benchmarkScript, undefined, workingDirectory);
+
+    let previousBenchmark: BenchmarkResult[];
+    try {
+        previousBenchmark = await executeBenchmarkScript(benchmarkScript, ref, workingDirectory);
+    } catch (e) {
+        // It's okay if the second one fails.
+        console.log(e);
+
+        previousBenchmark = [];
+    }
 
     if (pr && repo) {
-        const body = formatResults(base, current);
+        const body = formatResults(newBenchmark, previousBenchmark);
         const previousComment = await fetchPreviousComment(octokit, repo, pr);
 
         try {
