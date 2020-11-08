@@ -1628,16 +1628,17 @@ function fetchPreviousComment(octokit, repo, pr) {
 function getOptions() {
     return {
         token: core_1.getInput("github_token"),
+        outputFile: core_1.getInput("output_file"),
         benchmarkScript: core_1.getInput("benchmark_script"),
         workingDirectory: core_1.getInput("working_directory") || process.cwd(),
     };
 }
 function compareToRef(ref, pr, repo) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { token, benchmarkScript, workingDirectory } = getOptions();
+        const { token, outputFile, benchmarkScript, workingDirectory } = getOptions();
         const octokit = github_1.getOctokit(token);
-        const newBenchmark = yield benchmark_1.executeBenchmarkScript(benchmarkScript, undefined, workingDirectory);
-        const previousBenchmark = yield benchmark_1.executeBenchmarkScript(benchmarkScript, ref, workingDirectory);
+        const newBenchmark = yield benchmark_1.executeBenchmarkScript(outputFile, benchmarkScript, undefined, workingDirectory);
+        const previousBenchmark = yield benchmark_1.executeBenchmarkScript(outputFile, benchmarkScript, ref, workingDirectory);
         if (pr && repo) {
             const body = format_1.formatResults(newBenchmark, previousBenchmark);
             const previousComment = yield fetchPreviousComment(octokit, repo, pr);
@@ -6808,9 +6809,8 @@ const has_yarn_1 = __importDefault(__webpack_require__(707));
 const fs_1 = __webpack_require__(747);
 const path_1 = __webpack_require__(622);
 const util_1 = __webpack_require__(669);
-const BENCHMARK_LABEL = "Benchmark results: ";
-function executeBenchmarkScript(benchmarkScript, branch, workingDirectory) {
-    var _a, _b;
+const readFilePromise = util_1.promisify(fs_1.readFile);
+function executeBenchmarkScript(outputFile, benchmarkScript, branch, workingDirectory) {
     return __awaiter(this, void 0, void 0, function* () {
         const manager = has_yarn_1.default() ? "yarn" : "npm";
         if (branch) {
@@ -6824,41 +6824,22 @@ function executeBenchmarkScript(benchmarkScript, branch, workingDirectory) {
         }
         function execWithCwd(cmd, cwd) {
             return __awaiter(this, void 0, void 0, function* () {
-                let stdout = "";
-                let stderr = "";
-                yield exec_1.exec(cmd, [], {
+                return exec_1.exec(cmd, [], {
                     cwd,
-                    listeners: {
-                        stdout(data) {
-                            stdout += data.toString();
-                        },
-                        stderr(data) {
-                            stderr += data.toString();
-                        },
-                    },
                 });
-                const trimmedStderr = stderr.trim();
-                return trimmedStderr.length > 0
-                    ? Promise.reject(`Error while executing command: ${trimmedStderr}`)
-                    : Promise.resolve(stdout);
             });
         }
         yield execWithCwd(`${manager} install`, workingDirectory);
-        const packageJsonContent = yield util_1.promisify(fs_1.readFile)(path_1.join(workingDirectory !== null && workingDirectory !== void 0 ? workingDirectory : "", "package.json"));
+        const packageJsonContent = yield readFilePromise(path_1.join(workingDirectory !== null && workingDirectory !== void 0 ? workingDirectory : "", "package.json"));
         const packageJsonScripts = JSON.parse(packageJsonContent.toString()).scripts;
         if (!(benchmarkScript in packageJsonScripts)) {
             console.log(`Script ${benchmarkScript} not found in your package.json, skipping comparison`);
             return [];
         }
-        const benchmarkStdout = yield execWithCwd(`${manager} run ${benchmarkScript}`, workingDirectory);
-        const benchmarkResult = (_b = (_a = benchmarkStdout
-            .split("\n")
-            .find((line) => line.startsWith(BENCHMARK_LABEL))) === null || _a === void 0 ? void 0 : _a.split(BENCHMARK_LABEL)) === null || _b === void 0 ? void 0 : _b[1];
-        if (!benchmarkResult) {
-            throw new Error(`No benchmark results found, make sure you output it on a single line as JSON as such: '${BENCHMARK_LABEL}[...]`);
-        }
-        console.log(`Parsing result ${benchmarkResult}`);
-        return JSON.parse(benchmarkResult);
+        yield execWithCwd(`${manager} run ${benchmarkScript}`, workingDirectory);
+        const outFileJsonContent = yield readFilePromise(path_1.join(workingDirectory !== null && workingDirectory !== void 0 ? workingDirectory : "", outputFile));
+        console.log(`Received result ${outFileJsonContent}`);
+        return JSON.parse(outFileJsonContent.toString());
     });
 }
 exports.executeBenchmarkScript = executeBenchmarkScript;
