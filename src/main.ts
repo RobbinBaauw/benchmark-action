@@ -2,7 +2,7 @@ import { getInput, setFailed } from "@actions/core";
 import { context, getOctokit } from "@actions/github";
 import { WebhookPayload } from "@actions/github/lib/interfaces";
 import { Context } from "@actions/github/lib/context";
-import { BenchmarkResult, executeBenchmarkScript } from "./benchmark";
+import { executeBenchmarkScript } from "./benchmark";
 import { BENCHMARK_HEADING, formatResults } from "./format";
 
 async function fetchPreviousComment(

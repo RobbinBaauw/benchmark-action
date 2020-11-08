@@ -6068,21 +6068,23 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.formatResults = exports.BENCHMARK_HEADING = void 0;
 const markdown_table_1 = __importDefault(__webpack_require__(62));
 exports.BENCHMARK_HEADING = `## Benchmark report`;
-function formatResult(result) {
-    return `${result.opsPerSecond} ops/sec, ±${result.deviation}%, ${result.samples} samples`;
-}
 function formatResults(newResults, previousResults) {
+    var _a;
     const parsedResults = {};
     for (const newResult of newResults) {
-        const oldResult = newResults.find((it) => it.name === newResult.name);
+        const oldResult = previousResults.find((it) => it.name === newResult.name);
         const parsedResult = [
             newResult.name,
-            newResult.code,
-            formatResult(newResult),
-            oldResult ? formatResult(oldResult) : "-",
+            newResult.result,
+            (_a = oldResult === null || oldResult === void 0 ? void 0 : oldResult.name) !== null && _a !== void 0 ? _a : "-",
+            // TODO check that all benchmarks in category have the same fields
+            ...Object.values(newResult.extraFields),
         ];
-        if (!parsedResults[newResult.category])
-            parsedResults[newResult.category] = [];
+        if (!parsedResults[newResult.category]) {
+            const newCategory = [];
+            newCategory.push(["Name", "New", "Old", ...Object.keys(newResult.extraFields)]);
+            parsedResults[newResult.category] = newCategory;
+        }
         parsedResults[newResult.category].push(parsedResult);
     }
     const body = [exports.BENCHMARK_HEADING];
@@ -6828,7 +6830,7 @@ function executeBenchmarkScript(benchmarkScript, branch, workingDirectory) {
                         },
                     },
                 });
-                return stderr ? Promise.reject(stderr) : Promise.resolve(stdout);
+                return Promise.resolve([stdout, stderr]);
             });
         }
         yield execWithCwd(`${manager} install`, workingDirectory);
@@ -6838,14 +6840,19 @@ function executeBenchmarkScript(benchmarkScript, branch, workingDirectory) {
             console.log(`Script ${benchmarkScript} not found in your package.json, skipping comparison`);
             return [];
         }
-        const benchmarkOutput = yield execWithCwd(`${manager} run ${benchmarkScript}`, workingDirectory);
-        const benchmarkResult = (_b = (_a = benchmarkOutput
+        const [benchmarkStdout, benchmarkStderr] = yield execWithCwd(`${manager} run ${benchmarkScript}`, workingDirectory);
+        if (benchmarkStderr.length > 0)
+            console.log(`Received stderr: ${benchmarkStderr}`);
+        const benchmarkResult = (_b = (_a = benchmarkStdout
             .split("\n")
             .find((line) => line.startsWith(BENCHMARK_LABEL))) === null || _a === void 0 ? void 0 : _a.split(BENCHMARK_LABEL)) === null || _b === void 0 ? void 0 : _b[1];
         if (!benchmarkResult) {
             throw new Error(`No benchmark results found, make sure you output it on a single line as JSON as such: '${BENCHMARK_LABEL}[...]`);
         }
-        return JSON.parse(benchmarkResult);
+        console.log(`Parsing result ${benchmarkResult}`);
+        const parse = JSON.parse(benchmarkResult);
+        console.log(`Parsing successful, ${parse}`);
+        return parse;
     });
 }
 exports.executeBenchmarkScript = executeBenchmarkScript;

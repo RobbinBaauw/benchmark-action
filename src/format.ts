@@ -3,11 +3,7 @@ import table from "markdown-table";
 
 export const BENCHMARK_HEADING = `## Benchmark report`;
 
-type ParsedResult = [name: string, code: string, newResult: string, oldResult: string];
-
-function formatResult(result: BenchmarkResult): string {
-    return `${result.opsPerSecond} ops/sec, ±${result.deviation}%, ${result.samples} samples`;
-}
+type ParsedResult = [name: string, newResult: string, oldResult: string, ...extraFields: string[]];
 
 export function formatResults(newResults: BenchmarkResult[], previousResults: BenchmarkResult[]): string {
     const parsedResults: {
@@ -15,16 +11,22 @@ export function formatResults(newResults: BenchmarkResult[], previousResults: Be
     } = {};
 
     for (const newResult of newResults) {
-        const oldResult = newResults.find((it) => it.name === newResult.name);
+        const oldResult = previousResults.find((it) => it.name === newResult.name);
 
         const parsedResult: ParsedResult = [
             newResult.name,
-            newResult.code,
-            formatResult(newResult),
-            oldResult ? formatResult(oldResult) : "-",
+            newResult.result,
+            oldResult?.name ?? "-",
+            // TODO check that all benchmarks in category have the same fields
+            ...Object.values(newResult.extraFields),
         ];
 
-        if (!parsedResults[newResult.category]) parsedResults[newResult.category] = [];
+        if (!parsedResults[newResult.category]) {
+            const newCategory: ParsedResult[] = [];
+            newCategory.push(["Name", "New", "Old", ...Object.keys(newResult.extraFields)]);
+            parsedResults[newResult.category] = newCategory;
+        }
+
         parsedResults[newResult.category].push(parsedResult);
     }
 

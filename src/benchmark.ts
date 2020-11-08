@@ -7,10 +7,8 @@ import { promisify } from "util";
 export interface BenchmarkResult {
     name: string;
     category: string;
-    code: string;
-    opsPerSecond: number;
-    deviation: number;
-    samples: number;
+    result: string;
+    extraFields: Record<string, string>;
 }
 
 const BENCHMARK_LABEL = "Benchmark results: ";
@@ -32,7 +30,7 @@ export async function executeBenchmarkScript(
         await exec(`git checkout -f ${branch}`);
     }
 
-    async function execWithCwd(cmd: string, cwd?: string): Promise<string> {
+    async function execWithCwd(cmd: string, cwd?: string) {
         let stdout = "";
         let stderr = "";
 
@@ -48,7 +46,7 @@ export async function executeBenchmarkScript(
             },
         });
 
-        return stderr ? Promise.reject(stderr) : Promise.resolve(stdout);
+        return Promise.resolve([stdout, stderr]);
     }
 
     await execWithCwd(`${manager} install`, workingDirectory);
@@ -60,9 +58,10 @@ export async function executeBenchmarkScript(
         return [];
     }
 
-    const benchmarkOutput = await execWithCwd(`${manager} run ${benchmarkScript}`, workingDirectory);
+    const [benchmarkStdout, benchmarkStderr] = await execWithCwd(`${manager} run ${benchmarkScript}`, workingDirectory);
+    if (benchmarkStderr.length > 0) console.log(`Received stderr: ${benchmarkStderr}`);
 
-    const benchmarkResult = benchmarkOutput
+    const benchmarkResult = benchmarkStdout
         .split("\n")
         .find((line) => line.startsWith(BENCHMARK_LABEL))
         ?.split(BENCHMARK_LABEL)?.[1];
@@ -73,5 +72,8 @@ export async function executeBenchmarkScript(
         );
     }
 
-    return JSON.parse(benchmarkResult);
+    console.log(`Parsing result ${benchmarkResult}`);
+    const parse = JSON.parse(benchmarkResult);
+    console.log(`Parsing successful, ${parse}`);
+    return parse;
 }
