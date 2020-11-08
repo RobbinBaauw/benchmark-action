@@ -9,7 +9,7 @@ export interface BenchmarkResult {
     category: string;
     result: string;
     opsPerSecond: number;
-    extraFields: Record<string, string>;
+    extraFields?: Record<string, string>;
 }
 
 const readFilePromise = promisify(readFile);

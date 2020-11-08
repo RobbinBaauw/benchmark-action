@@ -6070,7 +6070,7 @@ exports.formatResults = exports.BENCHMARK_HEADING = void 0;
 const markdown_table_1 = __importDefault(__webpack_require__(62));
 exports.BENCHMARK_HEADING = `## Benchmark report`;
 function formatResults(newResults, previousResults) {
-    var _a;
+    var _a, _b, _c;
     const parsedResults = {};
     for (const newResult of newResults) {
         const oldResult = previousResults.find((it) => it.name === newResult.name);
@@ -6086,11 +6086,11 @@ function formatResults(newResults, previousResults) {
             (_a = oldResult === null || oldResult === void 0 ? void 0 : oldResult.name) !== null && _a !== void 0 ? _a : "-",
             difference,
             // TODO check that all benchmarks in category have the same fields
-            ...Object.values(newResult.extraFields),
+            ...Object.values((_b = newResult.extraFields) !== null && _b !== void 0 ? _b : {}),
         ];
         if (!parsedResults[newResult.category]) {
             const newCategory = [];
-            newCategory.push(["Name", "New", "Old", "Difference", ...Object.keys(newResult.extraFields)]);
+            newCategory.push(["Name", "New", "Old", "Difference", ...Object.keys((_c = newResult.extraFields) !== null && _c !== void 0 ? _c : {})]);
             parsedResults[newResult.category] = newCategory;
         }
         parsedResults[newResult.category].push(parsedResult);

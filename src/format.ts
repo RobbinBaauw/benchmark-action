@@ -26,12 +26,12 @@ export function formatResults(newResults: BenchmarkResult[], previousResults: Be
             oldResult?.name ?? "-",
             difference,
             // TODO check that all benchmarks in category have the same fields
-            ...Object.values(newResult.extraFields),
+            ...Object.values(newResult.extraFields ?? {}),
         ];
 
         if (!parsedResults[newResult.category]) {
             const newCategory: ParsedResult[] = [];
-            newCategory.push(["Name", "New", "Old", "Difference", ...Object.keys(newResult.extraFields)]);
+            newCategory.push(["Name", "New", "Old", "Difference", ...Object.keys(newResult.extraFields ?? {})]);
             parsedResults[newResult.category] = newCategory;
         }
 
