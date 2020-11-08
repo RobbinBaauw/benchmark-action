@@ -8,6 +8,7 @@ export interface BenchmarkResult {
     name: string;
     category: string;
     result: string;
+    opsPerSecond: number;
     extraFields: Record<string, string>;
 }
 
@@ -46,7 +47,10 @@ export async function executeBenchmarkScript(
             },
         });
 
-        return Promise.resolve([stdout, stderr]);
+        const trimmedStderr = stderr.trim();
+        return trimmedStderr.length > 0
+            ? Promise.reject(`Error while executing command: ${trimmedStderr}`)
+            : Promise.resolve(stdout);
     }
 
     await execWithCwd(`${manager} install`, workingDirectory);
@@ -58,8 +62,7 @@ export async function executeBenchmarkScript(
         return [];
     }
 
-    const [benchmarkStdout, benchmarkStderr] = await execWithCwd(`${manager} run ${benchmarkScript}`, workingDirectory);
-    if (benchmarkStderr.length > 0) console.log(`Received stderr: ${benchmarkStderr}`);
+    const benchmarkStdout = await execWithCwd(`${manager} run ${benchmarkScript}`, workingDirectory);
 
     const benchmarkResult = benchmarkStdout
         .split("\n")
@@ -73,7 +76,5 @@ export async function executeBenchmarkScript(
     }
 
     console.log(`Parsing result ${benchmarkResult}`);
-    const parse = JSON.parse(benchmarkResult);
-    console.log(`Parsing successful, ${parse}`);
-    return parse;
+    return JSON.parse(benchmarkResult);
 }
